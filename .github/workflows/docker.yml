@@ -44,36 +44,43 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
+      # Write SSH private key to a secure file
       - name: Write SSH key to file
         run: |
-          mkdir -p ~/.ssh
-          # Write private key preserving line breaks
-          printf "%s\n" "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-  
+          mkdir -p $HOME/.ssh
+          printf "%s\n" "${{ secrets.EC2_SSH_KEY }}" > $HOME/.ssh/id_rsa
+          chmod 600 $HOME/.ssh/id_rsa
+
+      # Add EC2 host to known_hosts to avoid SSH prompts
       - name: Add EC2 host to known_hosts
         run: |
-          mkdir -p ~/.ssh
-          ssh-keyscan -H "$EC2_HOST" >> ~/.ssh/known_hosts
+          mkdir -p $HOME/.ssh
+          ssh-keyscan -H "$EC2_HOST" >> $HOME/.ssh/known_hosts
         env:
           EC2_HOST: ${{ secrets.EC2_HOST }}
 
+      # SSH into EC2 and deploy the container from ECR
       - name: Deploy to EC2 via SSH
         env:
           AWS_REGION: ${{ secrets.AWS_REGION }}
           ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
         run: |
-          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=yes ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << EOF
+          ssh -i $HOME/.ssh/id_rsa -o StrictHostKeyChecking=yes ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << EOF
             set -ex
-  
+
+            # Login to AWS ECR
             aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $AWS_REGION.amazonaws.com
-  
+
+            # Stop and remove old container (if exists)
             docker stop fineract || true
             docker rm fineract || true
-  
+
+            # Pull latest Docker image from ECR
             docker pull $ECR_REPOSITORY:latest
-  
+
+            # Run the container
             docker run -d --restart always -p 8443:8443 --name fineract $ECR_REPOSITORY:latest
-  
+
+            # Optional: show logs for verification
             docker logs --tail 50 fineract
           EOF
