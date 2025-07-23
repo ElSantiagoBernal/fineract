@@ -41,6 +41,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Check SSH key length
+        run: echo "${{ secrets.EC2_SSH_KEY }}" | wc -c
+
       - name: Deploy to EC2 via SSH
         uses: appleboy/ssh-action@v0.1.6
         with:
