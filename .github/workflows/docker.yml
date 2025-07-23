@@ -14,9 +14,6 @@ jobs:
     environment: dev
 
     steps:
-
-      - name: Check SSH key length
-        run: echo "${{ secrets.EC2_SSH_KEY }}" | wc -c
         
       - name: Checkout code
         uses: actions/checkout@v3
@@ -67,7 +64,6 @@ jobs:
           ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << EOF
             aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REPOSITORY
           EOF
-
         
       - name: Deploy to EC2 via SSH
         env:
