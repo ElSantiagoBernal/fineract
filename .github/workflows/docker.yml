@@ -54,7 +54,21 @@ jobs:
       - name: Add EC2 host to known_hosts
         run: |
           ssh-keyscan -H "${{ secrets.EC2_HOST }}" >> ~/.ssh/known_hosts || true
-  
+
+      - name: Test SSH connection to EC2
+        run: |
+          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} hostname
+
+      - name: Test AWS ECR login on EC2
+        env:
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
+        run: |
+          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << EOF
+            aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $AWS_REGION.amazonaws.com
+          EOF
+
+        
       - name: Deploy to EC2 via SSH
         env:
           AWS_REGION: ${{ secrets.AWS_REGION }}
