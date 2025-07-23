@@ -80,7 +80,7 @@ jobs:
             docker stop fineract || true
             docker rm fineract || true
             docker pull $ECR_REPOSITORY:latest
-            docker run -d --restart always -p 8443:8443 --name fineract -e JAVA_OPTS="-Xmx256m -Xms128m" $ECR_REPOSITORY:latest
+            docker run -d --restart always -p 8443:8443 --name fineract -e JAVA_OPTS="-Xmx96m -Xms64m" $ECR_REPOSITORY:latest
             docker logs --tail 50 fineract
           EOF
 
