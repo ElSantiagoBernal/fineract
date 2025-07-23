@@ -1,21 +1,22 @@
 # Compile Jar
-FROM gradle:8.5.0-jdk17 AS builder
+FROM gradle:8.10.2-jdk21 AS build
 
 WORKDIR /app
-COPY --chown=gradle:gradle . /app
+
+# Copy all project files
+COPY . .
 
 RUN gradle bootJar -x test --no-daemon
 
-# create execution image
-FROM eclipse-temurin:17-jre
+# Create a fastest execution image
+FROM openjdk:21-jdk-slim
 
 WORKDIR /app
 
 # Copy jar generated before
-COPY --from=builder /app/fineract-provider/build/libs/*.jar fineract.jar
+COPY --from=build /app/fineract-provider/build/libs/*.jar fineract.jar
 
-# Expose Fineract default port
+# Expose Fineract's default port
 EXPOSE 8443
 
 ENTRYPOINT ["java", "-jar", "fineract.jar"]
-
