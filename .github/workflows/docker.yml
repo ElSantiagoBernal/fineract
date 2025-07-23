@@ -43,24 +43,35 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
-
     steps:
+      - name: Write SSH key to file
+        run: |
+          mkdir -p ~/.ssh
+          # Write private key preserving line breaks
+          printf "%s\n" "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+  
+      - name: Add EC2 host to known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+  
       - name: Deploy to EC2 via SSH
-        uses: appleboy/ssh-action@v0.1.6
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            # Login to ECR on EC2
-            aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin ${{ env.AWS_REGION }}.amazonaws.com
-            
-            # Stop and remove existing container if running
+        env:
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
+        run: |
+          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=yes ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << EOF
+            set -ex
+  
+            aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $AWS_REGION.amazonaws.com
+  
             docker stop fineract || true
             docker rm fineract || true
-
-            # Pull latest image
-            docker pull ${{ env.ECR_REPOSITORY }}:latest
-
-            # Run new container (customize según tu configuración)
-            docker run -d --restart always -p 8443:8443 --name fineract ${{ env.ECR_REPOSITORY }}:latest
+  
+            docker pull $ECR_REPOSITORY:latest
+  
+            docker run -d --restart always -p 8443:8443 --name fineract $ECR_REPOSITORY:latest
+  
+            docker logs --tail 50 fineract
+          EOF
