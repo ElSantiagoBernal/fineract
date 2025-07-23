@@ -65,7 +65,7 @@ jobs:
           ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
         run: |
           ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << EOF
-            aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $AWS_REGION.amazonaws.com
+            aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REPOSITORY
           EOF
 
         
@@ -76,7 +76,7 @@ jobs:
         run: |
           ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << EOF
             set -ex
-            aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $AWS_REGION.amazonaws.com
+            aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REPOSITORY
             docker stop fineract || true
             docker rm fineract || true
             docker pull $ECR_REPOSITORY:latest
